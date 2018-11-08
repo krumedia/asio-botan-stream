@@ -1,0 +1,5 @@
+TODOs:
+
+- custom boost::error_code for mapping botan exceptions
+- allow user callbacks for Botan::TLS::Callbacks
+- meaningfull tests
