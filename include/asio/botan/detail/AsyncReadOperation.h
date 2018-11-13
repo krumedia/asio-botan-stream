@@ -3,6 +3,7 @@
 #include <boost/asio.hpp>
 #include <botan/tls_channel.h>
 #include "StreamCore.h"
+#include "ConvertExceptions.h"
 
 namespace asio
 {
@@ -44,7 +45,16 @@ namespace asio
 						if (bytes_transferred > 0)
 						{
 							auto read_buffer = boost::asio::buffer(core_.input_buffer_, bytes_transferred);
-							channel_.received_data(static_cast<const uint8_t*>(read_buffer.data()), read_buffer.size());
+							try
+							{
+								channel_.received_data(static_cast<const uint8_t*>(read_buffer.data()), read_buffer.size());
+							}
+							catch (...)
+							{
+								ec = detail::convertException();
+								handler_(ec, 0);
+								return;
+							}
 						}
 						if (core_.received_data_.size() == 0 && !ec)
 						{

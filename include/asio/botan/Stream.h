@@ -13,6 +13,7 @@
 #include "detail/AsyncReadOperation.h"
 #include "detail/AsyncWriteOperation.h"
 #include "detail/AsyncHandshakeOperation.h"
+#include "detail/ConvertExceptions.h"
 
 namespace asio
 {
@@ -109,15 +110,15 @@ namespace asio
 			{
 				while (!channel().is_active())
 				{
-					writePendingTlsData(ec);
-					auto read_buffer = boost::asio::buffer(this->core_.input_buffer_, nextLayer_.read_some(this->core_.input_buffer_));
 					try
 					{
+						writePendingTlsData(ec);
+						auto read_buffer = boost::asio::buffer(this->core_.input_buffer_, nextLayer_.read_some(this->core_.input_buffer_));
 						channel().received_data(static_cast<const uint8_t*>(read_buffer.data()), read_buffer.size());
 					}
-					catch (std::exception& e)
+					catch (...)
 					{
-						ec = boost::system::errc::make_error_code(boost::system::errc::invalid_argument);
+						ec = detail::convertException();
 						return;
 					}
 				}
@@ -143,7 +144,15 @@ namespace asio
 
 			void shutdown(boost::system::error_code& ec)
 			{
-				channel().close();
+				try
+				{
+					channel().close();
+				}
+				catch (...)
+				{
+					ec = detail::convertException();
+					return;
+				}
 				writePendingTlsData(ec);
 			}
 
@@ -166,7 +175,15 @@ namespace asio
 					auto read_buffer = boost::asio::buffer(this->core_.input_buffer_, nextLayer_.read_some(this->core_.input_buffer_, ec));
 					if (ec)
 						return 0;
-					channel().received_data(static_cast<const uint8_t*>(read_buffer.data()), read_buffer.size());
+					try
+					{
+						channel().received_data(static_cast<const uint8_t*>(read_buffer.data()), read_buffer.size());
+					}
+					catch (...)
+					{
+						ec = detail::convertException();
+						return 0;
+					}
 				}
 
 				auto copied = boost::asio::buffer_copy(buffers, this->core_.received_data_.data());
@@ -195,7 +212,15 @@ namespace asio
 					boost::asio::detail::buffer_sequence_adapter<boost::asio::const_buffer,
 					ConstBufferSequence>::first(buffers);
 
-				channel().send(static_cast<const uint8_t*>(buffer.data()), buffer.size());
+				try
+				{
+					channel().send(static_cast<const uint8_t*>(buffer.data()), buffer.size());
+				}
+				catch (...)
+				{
+					ec = detail::convertException();
+					return 0;
+				}
 
 				writePendingTlsData(ec);
 				return buffer.size();
@@ -216,7 +241,16 @@ namespace asio
 					boost::asio::detail::buffer_sequence_adapter<boost::asio::const_buffer,
 					ConstBufferSequence>::first(buffers);
 
-				channel().send(static_cast<const uint8_t*>(buffer.data()), buffer.size());
+				try
+				{
+					channel().send(static_cast<const uint8_t*>(buffer.data()), buffer.size());
+				}
+				catch (...)
+				{
+					// TODO: don't call directly
+					handler(detail::convertException(), 0);
+					return;
+				}
 
 				boost::asio::async_completion<WriteHandler,
 					void(boost::system::error_code, std::size_t)> init(handler);

@@ -40,7 +40,16 @@ namespace asio
 					if (bytesTransferred > 0)
 					{
 						auto read_buffer = boost::asio::buffer(core_.input_buffer_, bytesTransferred);
-						channel_.received_data(static_cast<const uint8_t*>(read_buffer.data()), read_buffer.size());
+						try
+						{
+							channel_.received_data(static_cast<const uint8_t*>(read_buffer.data()), read_buffer.size());
+						}
+						catch (...)
+						{
+							ec = detail::convertException();
+							handler_(ec);
+							return;
+						}
 					}
 
 					// send tls packets
