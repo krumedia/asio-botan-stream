@@ -106,6 +106,13 @@ namespace asio
 				return this->channel_;
 			}
 
+			void handshake()
+			{
+				boost::system::error_code ec;
+				handshake(ec);
+				boost::asio::detail::throw_error(ec, "handshake");
+			}
+
 			void handshake(boost::system::error_code& ec)
 			{
 				while (!channel().is_active())
@@ -140,6 +147,13 @@ namespace asio
 				op(boost::system::error_code{}, 0, 1);
 
 				return init.result.get();
+			}
+
+			void shutdown()
+			{
+				boost::system::error_code ec;
+				shutdown(ec);
+				boost::asio::detail::throw_error(ec, "shutdown");
 			}
 
 			void shutdown(boost::system::error_code& ec)
