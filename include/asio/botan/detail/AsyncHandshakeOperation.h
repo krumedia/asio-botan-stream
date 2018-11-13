@@ -16,18 +16,18 @@ namespace asio
 			struct AsyncHandshakeOperation
 			{
 
-				AsyncHandshakeOperation(Botan::TLS::Channel& channel, StreamCore& core, StreamLayer& nextLayer, Handler& handler)
+				AsyncHandshakeOperation(Botan::TLS::Channel& channel, StreamCore& core, StreamLayer& nextLayer, Handler&& handler)
 					:channel_(channel),
 					core_(core),
 					nextLayer_(nextLayer),
-					handler_(handler)
+					handler_(std::forward<Handler>(handler))
 				{ }
 
 				AsyncHandshakeOperation(AsyncHandshakeOperation&& right)
 					:channel_(right.channel_),
 					core_(right.core_),
 					nextLayer_(right.nextLayer_),
-					handler_(right.handler_)
+					handler_(std::move(right.handler_))
 				{ }
 
 				~AsyncHandshakeOperation() = default;

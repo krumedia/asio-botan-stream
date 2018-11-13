@@ -14,11 +14,11 @@ namespace asio
 			template<typename StreamLayer, typename Handler, typename MutableBufferSequence>
 			struct AsyncReadOperation
 			{
-				AsyncReadOperation(Botan::TLS::Channel& channel, StreamCore& core, StreamLayer& nextLayer, Handler& handler, const MutableBufferSequence& buffers)
+				AsyncReadOperation(Botan::TLS::Channel& channel, StreamCore& core, StreamLayer& nextLayer, Handler&& handler, const MutableBufferSequence& buffers)
 					:channel_(channel),
 					core_(core),
 					nextLayer_(nextLayer),
-					handler_(std::move(handler)),
+					handler_(std::forward<Handler>(handler)),
 					buffers_(buffers)
 				{
 				}

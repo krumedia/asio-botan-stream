@@ -13,9 +13,9 @@ namespace asio
 			template<typename Handler>
 			struct AsyncWriteOperation
 			{
-				AsyncWriteOperation(StreamCore& core, Handler& handler, std::size_t plainBytesTransferred)
+				AsyncWriteOperation(StreamCore& core, Handler&& handler, std::size_t plainBytesTransferred)
 					: core_(core),
-					handler_(std::move(handler)),
+					handler_(std::forward<Handler>(handler)),
 					plainBytesTransferred_(plainBytesTransferred)
 				{
 				}
