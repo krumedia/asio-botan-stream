@@ -41,7 +41,6 @@ namespace asio
 				{
 					std::size_t decodedBytes = 0;
 					{
-						std::unique_lock<std::recursive_mutex> lock(core_.receiveMutex_);
 						if (bytes_transferred > 0)
 						{
 							auto read_buffer = boost::asio::buffer(core_.input_buffer_, bytes_transferred);
@@ -56,14 +55,14 @@ namespace asio
 								return;
 							}
 						}
-						if (core_.received_data_.size() == 0 && !ec)
+						if (!core_.hasReceivedData() && !ec)
 						{
 							// we need more tls packets from the socket
 							nextLayer_.async_read_some(core_.input_buffer_, std::move(*this));
 							return;
 						}
 
-						if (core_.received_data_.size() > 0)
+						if (core_.hasReceivedData())
 						{
 							if (start == 1)
 							{
@@ -71,9 +70,7 @@ namespace asio
 								nextLayer_.async_read_some(boost::asio::buffer(core_.input_buffer_, 0), std::move(*this));
 								return;
 							}
-							decodedBytes = boost::asio::buffer_copy(buffers_, core_.received_data_.data());
-
-							core_.received_data_.consume(decodedBytes);
+							decodedBytes = core_.copyReceivedData(buffers_);
 							ec = boost::system::error_code{};
 						}
 					}

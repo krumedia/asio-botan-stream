@@ -53,10 +53,10 @@ namespace asio
 					}
 
 					// send tls packets
-					if (core_.send_data_.size() > 0)
+					if (core_.hasDataToSend())
 					{
 						AsyncWriteOperation<AsyncHandshakeOperation<StreamLayer, Handler>> op{ core_, std::move(*this), 0 };
-						boost::asio::async_write(nextLayer_, core_.send_data_.data(), std::move(op));
+						boost::asio::async_write(nextLayer_, core_.sendBuffer(), std::move(op));
 						return;
 					}
 

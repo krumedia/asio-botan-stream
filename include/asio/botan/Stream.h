@@ -33,8 +33,8 @@ namespace asio
 			{
 			}
 
-			StreamBase(StreamBase&) = delete;
-			StreamBase& operator=(StreamBase&) = delete;
+			StreamBase(const StreamBase&) = delete;
+			StreamBase& operator=(const StreamBase&) = delete;
 		protected:
 			detail::StreamCore core_;
 			Botan::AutoSeeded_RNG rng_;
@@ -51,8 +51,9 @@ namespace asio
 			{
 			}
 
-			StreamBase(StreamBase&) = delete;
-			StreamBase& operator=(StreamBase&) = delete;
+			StreamBase(const StreamBase&) = delete;
+			StreamBase& operator=(const StreamBase&) = delete;
+
 		protected:
 			detail::StreamCore core_;
 			Botan::AutoSeeded_RNG rng_;
@@ -184,7 +185,7 @@ namespace asio
 			std::size_t read_some(const MutableBufferSequence& buffers,
 				boost::system::error_code& ec)
 			{
-				while (this->core_.received_data_.size() == 0)
+				while (!this->core_.hasReceivedData())
 				{
 					auto read_buffer = boost::asio::buffer(this->core_.input_buffer_, nextLayer_.read_some(this->core_.input_buffer_, ec));
 					if (ec)
@@ -199,9 +200,7 @@ namespace asio
 						return 0;
 					}
 				}
-
-				auto copied = boost::asio::buffer_copy(buffers, this->core_.received_data_.data());
-				this->core_.received_data_.consume(copied);
+				auto copied = this->core_.copyReceivedData(buffers);
 				ec = boost::system::error_code();
 				return copied;
 			}
@@ -221,7 +220,6 @@ namespace asio
 			std::size_t write_some(const ConstBufferSequence& buffers,
 				boost::system::error_code& ec)
 			{
-				std::unique_lock<std::recursive_mutex> lock(this->core_.sendMutex_);
 				boost::asio::const_buffer buffer =
 					boost::asio::detail::buffer_sequence_adapter<boost::asio::const_buffer,
 					ConstBufferSequence>::first(buffers);
@@ -249,8 +247,6 @@ namespace asio
 				// not meet the documented type requirements for a WriteHandler.
 				BOOST_ASIO_WRITE_HANDLER_CHECK(WriteHandler, handler) type_check;
 
-				std::unique_lock<std::recursive_mutex> lock(this->core_.sendMutex_);
-
 				boost::asio::const_buffer buffer =
 					boost::asio::detail::buffer_sequence_adapter<boost::asio::const_buffer,
 					ConstBufferSequence>::first(buffers);
@@ -270,7 +266,7 @@ namespace asio
 					void(boost::system::error_code, std::size_t)> init(handler);
 				auto op = create_async_write_op(std::move(init.completion_handler), buffer.size());
 
-				boost::asio::async_write(nextLayer_, this->core_.send_data_.data(), std::move(op));
+				boost::asio::async_write(nextLayer_, this->core_.sendBuffer(), std::move(op));
 				return init.result.get();
 			}
 
@@ -296,9 +292,8 @@ namespace asio
 
 			size_t writePendingTlsData(boost::system::error_code& ec)
 			{
-				std::unique_lock<std::recursive_mutex> lock(this->core_.sendMutex_);
-				auto writtenBytes = boost::asio::write(nextLayer_, this->core_.send_data_.data(), ec);
-				this->core_.send_data_.consume(writtenBytes);
+				auto writtenBytes = boost::asio::write(nextLayer_, this->core_.sendBuffer(), ec);
+				this->core_.consumeSendBuffer(writtenBytes);
 				return writtenBytes;
 			}
 

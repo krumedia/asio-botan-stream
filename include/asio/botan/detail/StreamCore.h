@@ -15,29 +15,34 @@ namespace asio
 			*/
 			struct StreamCore : public Botan::TLS::Callbacks
 			{
+				struct Buffer
+				{
+					Buffer():
+						dynamicBuffer(data_buffer)
+					{ }
+					std::vector<uint8_t> data_buffer;
+					boost::asio::dynamic_vector_buffer<uint8_t, typename decltype(data_buffer)::allocator_type> dynamicBuffer;
+				};
+
+
 				StreamCore()
 					: input_buffer_space_(17 * 1024, '\0'), // enough for a TLS Datagram
-					input_buffer_(boost::asio::buffer(input_buffer_space_)),
-					received_data_(received_data_buffer_),
-					send_data_(send_data_buffer_)
+					input_buffer_(boost::asio::buffer(input_buffer_space_))
 				{
 				}
 
-
 				void tls_emit_data(const uint8_t data[], size_t size) override
 				{
-					std::unique_lock<std::recursive_mutex> lock(sendMutex_);
-					auto buffer = send_data_.prepare(size);
+					auto buffer = send_buffer_.dynamicBuffer.prepare(size);
 					auto copySize = boost::asio::buffer_copy(buffer, boost::asio::buffer(data, size));
-					send_data_.commit(copySize);
+					send_buffer_.dynamicBuffer.commit(copySize);
 				}
 
 				void tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size) override
 				{
-					std::unique_lock<std::recursive_mutex> lock(receiveMutex_);
-					auto buffer = received_data_.prepare(size);
+					auto buffer = receive_buffer_.dynamicBuffer.prepare(size);
 					auto copySize = boost::asio::buffer_copy(buffer, boost::asio::buffer(data, size));
-					received_data_.commit(copySize);
+					receive_buffer_.dynamicBuffer.commit(copySize);
 				}
 
 				void tls_alert(Botan::TLS::Alert alert) override
@@ -53,22 +58,43 @@ namespace asio
 					return true;
 				}
 
+				bool hasReceivedData() const
+				{
+					return receive_buffer_.dynamicBuffer.size() > 0;
+				}
 
-				std::recursive_mutex receiveMutex_;
-				std::recursive_mutex sendMutex_;
+				template<typename MutableBufferSequence>
+				std::size_t copyReceivedData(MutableBufferSequence buffers)
+				{
+					auto copiedBytes = boost::asio::buffer_copy(buffers, receive_buffer_.dynamicBuffer.data());
+					receive_buffer_.dynamicBuffer.consume(copiedBytes);
+					return copiedBytes;
+				}
+
+				bool hasDataToSend() const
+				{
+					return send_buffer_.dynamicBuffer.size() > 0;
+				}
+
+				boost::asio::const_buffer sendBuffer() const
+				{
+					return send_buffer_.dynamicBuffer.data();
+				}
+
+				void consumeSendBuffer(std::size_t bytesConsumed)
+				{
+					send_buffer_.dynamicBuffer.consume(bytesConsumed);
+				}
 
 				// Buffer space used to read input intended for the engine.
-				std::vector<unsigned char> input_buffer_space_;
+				std::vector<uint8_t> input_buffer_space_;
 
 				// A buffer that may be used to read input intended for the engine.
 				const boost::asio::mutable_buffer input_buffer_;
 
-				std::vector<uint8_t> received_data_buffer_;
-				boost::asio::dynamic_vector_buffer<uint8_t, typename decltype(received_data_buffer_)::allocator_type> received_data_;
-
-
-				std::vector<uint8_t> send_data_buffer_;
-				boost::asio::dynamic_vector_buffer<uint8_t, typename decltype(send_data_buffer_)::allocator_type> send_data_;
+			private:
+				Buffer receive_buffer_;
+				Buffer send_buffer_;
 			};
 		}
 	}

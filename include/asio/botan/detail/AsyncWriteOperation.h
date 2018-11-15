@@ -32,10 +32,7 @@ namespace asio
 
 				void operator()(boost::system::error_code ec, std::size_t bytes_transferred = ~std::size_t(0))
 				{
-					{
-						std::unique_lock<std::recursive_mutex> lock(core_.sendMutex_);
-						core_.send_data_.consume(bytes_transferred);
-					}
+					core_.consumeSendBuffer(bytes_transferred);
 					handler_(ec, plainBytesTransferred_);
 				}
 
