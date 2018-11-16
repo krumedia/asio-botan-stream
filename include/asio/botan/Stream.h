@@ -121,8 +121,11 @@ namespace asio
 					try
 					{
 						writePendingTlsData(ec);
-						auto read_buffer = boost::asio::buffer(this->core_.input_buffer_, nextLayer_.read_some(this->core_.input_buffer_));
+						auto read_buffer = boost::asio::buffer(this->core_.input_buffer_, nextLayer_.read_some(this->core_.input_buffer_, ec));
+						if (ec)
+							return;
 						channel().received_data(static_cast<const uint8_t*>(read_buffer.data()), read_buffer.size());
+						writePendingTlsData(ec);
 					}
 					catch (...)
 					{
