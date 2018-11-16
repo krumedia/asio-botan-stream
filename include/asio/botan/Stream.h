@@ -28,7 +28,7 @@ namespace asio
 		class StreamBase<Botan::TLS::Client>
 		{
 		public:
-			StreamBase(Botan::TLS::Session_Manager& sessionManager, Botan::Credentials_Manager& credentialsManager, Botan::TLS::Policy& policy, const Botan::TLS::Server_Information& serverInfo = Botan::TLS::Server_Information{})
+			StreamBase(Botan::TLS::Session_Manager& sessionManager, Botan::Credentials_Manager& credentialsManager, const Botan::TLS::Policy& policy = Botan::TLS::Strict_Policy{}, const Botan::TLS::Server_Information& serverInfo = Botan::TLS::Server_Information{})
 				: channel_(core_, sessionManager, credentialsManager, policy, rng_, serverInfo)
 			{
 			}
@@ -46,7 +46,7 @@ namespace asio
 		class StreamBase<Botan::TLS::Server>
 		{
 		public:
-			StreamBase(Botan::TLS::Session_Manager& sessionManager, Botan::Credentials_Manager& credentialsManager, Botan::TLS::Policy& policy)
+			StreamBase(Botan::TLS::Session_Manager& sessionManager, Botan::Credentials_Manager& credentialsManager, const Botan::TLS::Policy& policy = Botan::TLS::Strict_Policy{})
 				: channel_(core_, sessionManager, credentialsManager, policy, rng_)
 			{
 			}
