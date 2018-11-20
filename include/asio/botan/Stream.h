@@ -33,9 +33,15 @@ namespace asio
 			{
 			}
 
+			StreamBase(Botan::Credentials_Manager& credentialsManager, const Botan::TLS::Policy& policy = Botan::TLS::Strict_Policy{}, const Botan::TLS::Server_Information& serverInfo = Botan::TLS::Server_Information{})
+				: channel_(core_, sessionManagerNoop_, credentialsManager, policy, rng_, serverInfo)
+			{
+			}
+
 			StreamBase(const StreamBase&) = delete;
 			StreamBase& operator=(const StreamBase&) = delete;
 		protected:
+			Botan::TLS::Session_Manager_Noop sessionManagerNoop_;
 			detail::StreamCore core_;
 			Botan::AutoSeeded_RNG rng_;
 			Botan::TLS::Client channel_;
@@ -51,10 +57,16 @@ namespace asio
 			{
 			}
 
+			StreamBase(Botan::Credentials_Manager& credentialsManager, const Botan::TLS::Policy& policy = Botan::TLS::Strict_Policy{})
+				: channel_(core_, sessionManagerNoop_, credentialsManager, policy, rng_)
+			{
+			}
+
 			StreamBase(const StreamBase&) = delete;
 			StreamBase& operator=(const StreamBase&) = delete;
 
 		protected:
+			Botan::TLS::Session_Manager_Noop sessionManagerNoop_;
 			detail::StreamCore core_;
 			Botan::AutoSeeded_RNG rng_;
 			Botan::TLS::Server channel_;
